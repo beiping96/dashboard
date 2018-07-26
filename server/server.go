@@ -2,17 +2,21 @@ package server
 
 import (
 	"crypto/md5"
+	"database/sql"
 	"encoding/hex"
 	"encoding/xml"
 	"fmt"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/labstack/gommon/log"
+	"github.com/sony/sonyflake"
 	"html/template"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -153,5 +157,91 @@ func index(c echo.Context) error {
 }
 
 func mailSender(c echo.Context) error {
-	return nil
+	result := mailPacker(c.FormValue("serverID"), c.FormValue("dbName"),
+		c.FormValue("goods"), c.FormValue("title"),
+		c.FormValue("content"), c.FormValue("accNames"))
+	return c.Render(http.StatusOK, "index", result)
+}
+
+func mailPacker(serverIDStr, dbName, goodsStr, title, content, accNames string) string {
+	serverID, err := strconv.Atoi(serverIDStr)
+	if err != nil {
+		return "Server ID is not integer"
+	}
+	if len(dbName) == 0 {
+		return "dbName is empty"
+	}
+
+	conn, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8",
+		config.DBUser, config.DBPw, config.DBAddr, config.DBPort, dbName))
+	if err != nil {
+		return "db connection error " + err.Error()
+	}
+	defer conn.Close()
+	if accNames == "" {
+		return "empty accnames"
+	}
+
+	playerIDs := []int{}
+	for _, accname := range strings.Split(accNames, "/") {
+		if accname == "" {
+			continue
+		}
+		row := conn.QueryRow("SELECT id FROM player WHERE accname=?", accname)
+		playerID := 0
+		err = row.Scan(&playerID)
+		if err != nil {
+			return "accname not found " + accNames + " one: " + accname
+		}
+		playerIDs = append(playerIDs, playerID)
+	}
+	if len(playerIDs) == 0 {
+		return "not found playerIDs " + accNames
+	}
+
+	goods := []string{}
+	for _, goodsOne := range strings.Split(goodsStr, "/") {
+		if goodsOne == "" {
+			continue
+		}
+		goodsKV := strings.Split(goodsOne, ",")
+		if len(goodsKV) != 2 {
+			return "check goods List " + goodsStr
+		}
+		goodsID, err := strconv.Atoi(goodsKV[0])
+		if err != nil {
+			return "check goods List " + goodsStr
+		}
+		goodsNum, err := strconv.Atoi(goodsKV[1])
+		if err != nil {
+			return "check goods List " + goodsStr
+		}
+		goodsOneStr := fmt.Sprintf("{%d,%d}", goodsID, goodsNum)
+		goods = append(goods, goodsOneStr)
+	}
+	goodsStr = "[" + strings.Join(goods, ",") + "]"
+	successNum := 0
+	mailIDs := mailIDGenerator(serverID, len(playerIDs))
+
+	for index, playerID := range playerIDs {
+		mailID := mailIDs[index]
+		_, err := conn.Exec("INSERT INTO player_mail (id, type, send_role_id, rec_role_id, title, content, accessory, ctime) VALUES (?, 1, 0, ?, ?, ?, ?, ?)",
+			mailID, playerID, title, content, goodsStr, time.Now().Unix())
+		if err != nil {
+			return err.Error()
+		}
+		successNum++
+	}
+
+	fmt.Println(serverID, dbName, goods, title, content, accNames)
+	return fmt.Sprintf("success %v", successNum)
+}
+
+func mailIDGenerator(serverID int, num int) []uint64 {
+	generator := sonyflake.NewSonyflake(sonyflake.Settings{MachineID: func() (uint16, error) { return uint16(serverID), nil }})
+	ans := make([]uint64, num)
+	for index := range ans {
+		ans[index], _ = generator.NextID()
+	}
+	return ans
 }
