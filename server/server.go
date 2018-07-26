@@ -60,6 +60,7 @@ func Start(configFile string) error {
 	// echo
 	e := echo.New()
 	e.Use(middleware.Recover())
+	e.Use(middleware.CORS())
 	e.Use(middleware.Logger())
 	switch config.LogLevel {
 	case "debug":
@@ -81,6 +82,7 @@ func Start(configFile string) error {
 		Validator: authValidator,
 	}))
 	e.GET("/", index)
+	e.GET("/mailSender", index)
 	e.POST("/mailSender", mailSender)
 	err = e.Start(config.ListenPort)
 	if err != nil {
