@@ -86,7 +86,7 @@ func Start(configFile string) error {
 		Validator: authValidator,
 	}))
 	e.GET("/", index)
-	e.GET("/mailSender", index)
+	e.GET("/mailSender", indexPage)
 	e.POST("/mailSender", mailSender)
 	err = e.Start(config.ListenPort)
 	if err != nil {
@@ -153,6 +153,10 @@ func getExpireTimestamp() int64 {
 }
 
 func index(c echo.Context) error {
+	return c.Redirect(http.StatusMovedPermanently, "/mailSender")
+}
+
+func indexPage(c echo.Context) error {
 	return c.Render(http.StatusOK, "index", nil)
 }
 
