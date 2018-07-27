@@ -90,7 +90,6 @@ func Start(configFile string) error {
 	e.POST("/mailSender", mailSender)
 	e.GET("/globalMailSender", globalMailIndex)
 	e.POST("/globalMailSender", globalMailSender)
-	e.GET("/activityControl", activityControlIndex)
 	err = e.Start(config.ListenPort)
 	if err != nil {
 		return fmt.Errorf("server %v start error %v",
@@ -153,10 +152,6 @@ func getExpireTimestamp() int64 {
 		0, 0, 0, 0, now.Location())
 	timeHour := timeZero.Add(time.Hour * time.Duration(expire))
 	return timeHour.Unix()
-}
-
-func activityControlIndex(c echo.Context) error {
-	return c.Render(http.StatusOK, "activityControl", nil)
 }
 
 func globalMailIndex(c echo.Context) error {
