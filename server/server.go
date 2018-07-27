@@ -195,13 +195,10 @@ func mailPacker(serverIDStr, dbName, goodsStr, title, content, accNames string, 
 		return "db connection error " + err.Error()
 	}
 	defer conn.Close()
-	if accNames == "" {
-		return "empty accnames"
-	}
 
 	playerIDs := []int{}
 	if isAll {
-		rows, err := conn.Query("SELECT id from player")
+		rows, err := conn.Query("SELECT id FROM player")
 		if err != nil {
 			return "db connection error " + err.Error()
 		}
@@ -215,6 +212,9 @@ func mailPacker(serverIDStr, dbName, goodsStr, title, content, accNames string, 
 		}
 		rows.Close()
 	} else {
+		if accNames == "" {
+			return "empty accnames"
+		}
 		for _, accname := range strings.Split(accNames, "/") {
 			if accname == "" {
 				continue
