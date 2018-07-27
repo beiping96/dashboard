@@ -88,6 +88,8 @@ func Start(configFile string) error {
 	e.GET("/", index)
 	e.GET("/mailSender", indexPage)
 	e.POST("/mailSender", mailSender)
+	e.GET("/globalMailSender", globalMailIndex)
+	e.POST("/globalMailSender", globalMailSender)
 	err = e.Start(config.ListenPort)
 	if err != nil {
 		return fmt.Errorf("server %v start error %v",
@@ -152,6 +154,10 @@ func getExpireTimestamp() int64 {
 	return timeHour.Unix()
 }
 
+func globalMailIndex(c echo.Context) error {
+	return c.Render(http.StatusOK, "globalMailSender", nil)
+}
+
 func index(c echo.Context) error {
 	return c.Redirect(http.StatusMovedPermanently, "/mailSender")
 }
@@ -160,14 +166,21 @@ func indexPage(c echo.Context) error {
 	return c.Render(http.StatusOK, "index", nil)
 }
 
+func globalMailSender(c echo.Context) error {
+	result := mailPacker(c.FormValue("serverID"), c.FormValue("dbName"),
+		c.FormValue("goods"), c.FormValue("title"),
+		c.FormValue("content"), c.FormValue("accNames"), true)
+	return c.Render(http.StatusOK, "globalMailSender", result)
+}
+
 func mailSender(c echo.Context) error {
 	result := mailPacker(c.FormValue("serverID"), c.FormValue("dbName"),
 		c.FormValue("goods"), c.FormValue("title"),
-		c.FormValue("content"), c.FormValue("accNames"))
+		c.FormValue("content"), c.FormValue("accNames"), false)
 	return c.Render(http.StatusOK, "index", result)
 }
 
-func mailPacker(serverIDStr, dbName, goodsStr, title, content, accNames string) string {
+func mailPacker(serverIDStr, dbName, goodsStr, title, content, accNames string, isAll bool) string {
 	serverID, err := strconv.Atoi(serverIDStr)
 	if err != nil {
 		return "Server ID is not integer"
@@ -187,17 +200,33 @@ func mailPacker(serverIDStr, dbName, goodsStr, title, content, accNames string) 
 	}
 
 	playerIDs := []int{}
-	for _, accname := range strings.Split(accNames, "/") {
-		if accname == "" {
-			continue
-		}
-		row := conn.QueryRow("SELECT id FROM player WHERE accname=?", accname)
-		playerID := 0
-		err = row.Scan(&playerID)
+	if isAll {
+		rows, err := conn.Query("SELECT id from player")
 		if err != nil {
-			return "accname not found " + accNames + " one: " + accname
+			return "db connection error " + err.Error()
 		}
-		playerIDs = append(playerIDs, playerID)
+		for rows.Next() {
+			playerID := 0
+			err = rows.Scan(&playerID)
+			if err != nil {
+				return "scan playerID error " + err.Error()
+			}
+			playerIDs = append(playerIDs, playerID)
+		}
+		rows.Close()
+	} else {
+		for _, accname := range strings.Split(accNames, "/") {
+			if accname == "" {
+				continue
+			}
+			row := conn.QueryRow("SELECT id FROM player WHERE accname=?", accname)
+			playerID := 0
+			err = row.Scan(&playerID)
+			if err != nil {
+				return "accname not found " + accNames + " one: " + accname
+			}
+			playerIDs = append(playerIDs, playerID)
+		}
 	}
 	if len(playerIDs) == 0 {
 		return "not found playerIDs " + accNames

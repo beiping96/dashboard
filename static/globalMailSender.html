@@ -1,4 +1,4 @@
-{{define "index"}}
+{{define "globalMailSender"}}
 <html lang="en">
 
 <head>
@@ -49,13 +49,13 @@
                 </div>
 
                 <ul class="nav">
-                    <li class="active">
+                    <li>
                         <a href="/mailSender">
                             <i class="ti-user"></i>
                             <p>Mail Sender</p>
                         </a>
                     </li>
-                    <li>
+                    <li class="active">
                         <a href="/globalMailSender">
                             <i class="ti-view-list-alt"></i>
                             <p>Global Mail Sender</p>
@@ -111,18 +111,17 @@
                             <span class="icon-bar bar2"></span>
                             <span class="icon-bar bar3"></span>
                         </button>
-                        <a class="navbar-brand" href="/">Mail Sender</a>
+                        <a class="navbar-brand" href="/">Global Mail Sender</a>
                     </div>
                 </div>
             </nav>
-
 
             <div class="content">
                 <div class="container-fluid">
                     <div class="row">
                         <div class="card">
                             <div class="header">
-                                <h4 class="title">批量邮件发送</h4>
+                                <h4 class="title">全服邮件发送</h4>
                             </div>
                             <div class="content">
                                 <form method="post">
@@ -159,14 +158,6 @@
                                             <div class="form-group">
                                                 <label>邮件正文</label>
                                                 <input name="content" type="text" class="form-control border-input" placeholder="content" required>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-12">
-                                            <div class="form-group">
-                                                <label>用户名/用户名</label>
-                                                <textarea name="accNames" rows="5" class="form-control border-input" placeholder="accName/accName" required></textarea>
                                             </div>
                                         </div>
                                     </div>
