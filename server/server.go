@@ -223,7 +223,11 @@ func mailPacker(serverIDStr, dbName, goodsStr, title, content, accNames string) 
 		goodsOneStr := fmt.Sprintf("{%d,%d}", goodsID, goodsNum)
 		goods = append(goods, goodsOneStr)
 	}
-	goodsStr = "[" + strings.Join(goods, ",") + "]"
+	if len(goods) > 0 {
+		goodsStr = "[{6,[" + strings.Join(goods, ",") + "]}]"
+	} else {
+		goodsStr = "[]"
+	}
 	successNum := 0
 	mailIDs := mailIDGenerator(serverID, len(playerIDs))
 
