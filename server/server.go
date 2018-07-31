@@ -10,7 +10,6 @@ import (
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/labstack/gommon/log"
-	"github.com/sony/sonyflake"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -258,7 +257,7 @@ func mailPacker(serverIDStr, dbName, goodsStr, title, content, accNames string, 
 		goodsStr = "[]"
 	}
 	successNum := 0
-	mailIDs := mailIDGenerator(serverID, len(playerIDs))
+	mailIDs := mailIDGenerator(conn, serverID, len(playerIDs))
 
 	for index, playerID := range playerIDs {
 		mailID := mailIDs[index]
@@ -274,11 +273,18 @@ func mailPacker(serverIDStr, dbName, goodsStr, title, content, accNames string, 
 	return fmt.Sprintf("success %v", successNum)
 }
 
-func mailIDGenerator(serverID int, num int) []uint64 {
-	generator := sonyflake.NewSonyflake(sonyflake.Settings{MachineID: func() (uint16, error) { return uint16(serverID), nil }})
+func mailIDGenerator(conn *sql.DB, serverID int, num int) []uint64 {
+	minID := uint64(serverID+1000) << 32
+	row := conn.QueryRow("SELECT max(id) FROM player_mail where id>?", minID)
+	maxID := uint64(0)
+	err := row.Scan(&maxID)
+	if err != nil {
+		maxID = minID
+	}
 	ans := make([]uint64, num)
 	for index := range ans {
-		ans[index], _ = generator.NextID()
+		maxID++
+		ans[index] = maxID
 	}
 	return ans
 }
